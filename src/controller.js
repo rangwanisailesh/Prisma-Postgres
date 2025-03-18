@@ -1,4 +1,5 @@
 const Prisma = require('../prisma/db');
+const Sb = require('../supabase/supabase');
 
 // create user
 const CreateUser = async (req, res) => {
@@ -99,11 +100,37 @@ const AllUsers = async (req, res) => {
     }
 };
 
+// storage upload
+const storageUpload = async (req, res) => {
+    try {
+
+        const file = req.file;
+        const filePath = `uploads/${Date.now()}_${file.originalname}`; //supabase under bucket location
+
+        const { data, error } = await Sb.storage
+            .from("first")  // Supabase Bucket Name
+            .upload(filePath, file.buffer, {
+                contentType: file.mimetype
+            });
+
+        if (error) throw error;
+
+        const { data: publicUrl } = Sb.storage
+            .from("first")
+            .getPublicUrl(filePath);
+
+        return res.json({ success: true, fileUrl: publicUrl.publicUrl });
+    } catch (err) {
+        return res.json({ error: err.message });
+    }
+}
+
 module.exports = {
     AllUsers,
     CreateUser,
     CreateMultiplePosts,
     DeleteUser,
     UpdateMultiplePosts,
-    UpsertUser
+    UpsertUser,
+    storageUpload
 };
